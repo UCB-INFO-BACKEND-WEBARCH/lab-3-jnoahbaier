@@ -35,6 +35,7 @@ app.config["OPENAPI_SWAGGER_UI_URL"] = "https://cdn.jsdelivr.net/npm/swagger-ui-
 api = Api(app)
 
 
+
 # ============================================================
 # In-Memory Storage
 # ============================================================
@@ -102,34 +103,18 @@ class ItemList(MethodView):
         """
         global next_item_id
 
-        # --------------------------------------------------
-        # TODO 1: Business Validation — Store must exist
-        #
-        #   Check if item_data["store_id"] refers to a real
-        #   store. If not, reject the request.
-        #
-        #   Use: store_exists() helper function
-        #   Use: abort(404, message="Store not found.")
-        #
-        #   Test: {"name": "Ghost", "price": 5, "store_id": 999}
-        #         should return 404
-        # --------------------------------------------------
+        if not store_exists(item_data["store_id"]):
+            abort(404, message="Store not found.")
+            
+        if duplicate_name_in_store(item_data["name"], item_data["store_id"]):
+            abort(409, message="An item with this name already exists in this store.")
 
-        # --------------------------------------------------
-        # TODO 4: Data Integrity — No duplicate names per store
-        #
-        #   Two items in the SAME store cannot have the same
-        #   name (case-insensitive). Same name in a DIFFERENT
-        #   store is fine.
-        #
-        #   Use: duplicate_name_in_store() helper function
-        #   Use: abort(409, message="An item with this name already exists in this store.")
-        #
-        #   Test: Create "Laptop" in store 1, then try to
-        #         create "Laptop" in store 1 again → 409
-        #   Test: Create "Laptop" in store 1, then
-        #         create "Laptop" in store 2 → 201 (OK)
-        # --------------------------------------------------
+        if item_data.get("discount_price") is not None and item_data["discount_price"] > item_data["price"]:
+            abort(422, message="Discount price cannot exceed regular price.")
+
+        if item_data["name"].strip() == "":
+            abort(422, message="Name cannot be blank.")
+
 
         new_item = {
             "id": next_item_id,
